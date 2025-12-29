@@ -1,11 +1,9 @@
 let scene, camera, renderer;
-let world;
-let car, carBody;
-let accelerate = false, brake = false, steerLeft = false, steerRight = false;
+let car;
+let speed = 0;
+let direction = 0;
 
 function init() {
-
-    // THREE.js Cena
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x222222);
 
@@ -16,76 +14,47 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById("game").appendChild(renderer.domElement);
 
-    // Luz
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(5,10,5);
     scene.add(light);
 
-    // CANNON.js Mundo Físico
-    world = new CANNON.World();
-    world.gravity.set(0, -9.82, 0);
-
     // Chão
-    const groundShape = new CANNON.Box(new CANNON.Vec3(50, 0.1, 50));
-    const groundBody = new CANNON.Body({ mass: 0 });
-    groundBody.addShape(groundShape);
-    groundBody.position.set(0, -0.1, 0);
-    world.addBody(groundBody);
-
-    const groundMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(100, 0.2, 100),
-        new THREE.MeshPhongMaterial({ color: 0x444444 })
+    const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(200, 200),
+        new THREE.MeshPhongMaterial({color: 0x444444})
     );
-    scene.add(groundMesh);
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
 
-    // Carro (corpo simples no início)
-    const carGeometry = new THREE.BoxGeometry(1, 0.5, 2);
-    const carMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-    car = new THREE.Mesh(carGeometry, carMaterial);
+    // Carro (caixa simples)
+    const carGeo = new THREE.BoxGeometry(1, 0.5, 2);
+    const carMat = new THREE.MeshPhongMaterial({color: 0xff0000});
+    car = new THREE.Mesh(carGeo, carMat);
+    car.position.y = 0.25;
     scene.add(car);
 
-    carBody = new CANNON.Body({
-        mass: 150,
-        shape: new CANNON.Box(new CANNON.Vec3(0.5, 0.25, 1)),
-    });
-    world.addBody(carBody);
+    animate();
 
-    window.addEventListener('resize', onResize);
+    // Mobile buttons
+    document.getElementById("accel").onmousedown = () => speed = 0.05;
+    document.getElementById("accel").onmouseup = () => speed = 0;
 
-    // Controles da tela
-    document.getElementById("accel").onmousedown = () => accelerate = true;
-    document.getElementById("accel").onmouseup = () => accelerate = false;
+    document.getElementById("brake").onmousedown = () => speed = -0.05;
+    document.getElementById("brake").onmouseup = () => speed = 0;
 
-    document.getElementById("brake").onmousedown = () => brake = true;
-    document.getElementById("brake").onmouseup = () => brake = false;
+    document.getElementById("left").onmousedown = () => direction = 0.03;
+    document.getElementById("left").onmouseup = () => direction = 0;
 
-    document.getElementById("left").onmousedown = () => steerLeft = true;
-    document.getElementById("left").onmouseup = () => steerLeft = false;
-
-    document.getElementById("right").onmousedown = () => steerRight = true;
-    document.getElementById("right").onmouseup = () => steerRight = false;
-}
-
-function onResize(){
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById("right").onmousedown = () => direction = -0.03;
+    document.getElementById("right").onmouseup = () => direction = 0;
 }
 
 function animate() {
     requestAnimationFrame(animate);
-    const force = 4;
-    const steerForce = 0.05;
 
-    if (accelerate) carBody.velocity.z += -force;
-    if (brake) carBody.velocity.z += force;
-    if (steerLeft) carBody.angularVelocity.y += steerForce;
-    if (steerRight) carBody.angularVelocity.y -= steerForce;
-
-    world.step(1/60);
-
-    car.position.copy(carBody.position);
-    car.quaternion.copy(carBody.quaternion);
+    car.rotation.y += direction;
+    car.position.x -= Math.sin(car.rotation.y) * speed;
+    car.position.z -= Math.cos(car.rotation.y) * speed;
 
     camera.position.lerp(
         new THREE.Vector3(car.position.x, car.position.y + 3, car.position.z - 8),
@@ -96,6 +65,4 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// Iniciar
 init();
-animate();
